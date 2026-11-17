@@ -1,0 +1,931 @@
+<meta charset="utf-8">
+<title>James Mullally</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Instrument+Sans:wght@400;500&family=DM+Mono&display=swap">
+<style>
+  /* Layout: one full-screen lake. Horizon at 42%; the name stands on it and
+     reflects below. Everything else is small type pinned to the corners. */
+  :root {
+    --sky-top: #74B7E8;
+    --sky-low: #DDF0F8;
+    --water-far: #A3D0E4;
+    --water-near: #3E8DB4;
+    --ink: #14303F;
+    --muted: #21475A;
+    --stone: #4A4F52;
+    --ripple: #F4FBFD;
+    --sun: #FFE7A0;
+    --cloud: #FFFFFF;
+    --hills: #86B5A2;
+    --sand: #EAD9B0;
+    --sand-wet: #CDB98C;
+    --grass: #5E8C5A;
+    --hull: #2F3E46;
+    --sail: #FFFFFF;
+    --duck: #6B4F3A;
+    --duck-head: #2F5D46;
+    --beak: #E8A33D;
+    --fish: #EAF3F6;
+    --night: 0;
+    --font-display: "Instrument Serif", Georgia, "Times New Roman", serif;
+    --font-body: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-data: "DM Mono", ui-monospace, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --sky-top: #0A1626; --sky-low: #1E3550; --water-far: #173048; --water-near: #081320;
+      --ink: #E6EEF2; --muted: #A9BCC6; --stone: #AEB8BC; --ripple: #BFD9E6;
+      --sun: #F3F0DC; --cloud: #2C4460; --hills: #12283A; --sand: #3A3A33; --sand-wet: #2A2B28;
+      --grass: #2E4A38; --hull: #0A1118; --sail: #C9D4DA; --duck: #5A4636; --duck-head: #2A4A3A;
+      --beak: #C98A35; --fish: #BFD0D6; --night: 1;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --sky-top: #0A1626; --sky-low: #1E3550; --water-far: #173048; --water-near: #081320;
+    --ink: #E6EEF2; --muted: #A9BCC6; --stone: #AEB8BC; --ripple: #BFD9E6;
+    --sun: #F3F0DC; --cloud: #2C4460; --hills: #12283A; --sand: #3A3A33; --sand-wet: #2A2B28;
+    --grass: #2E4A38; --hull: #0A1118; --sail: #C9D4DA; --duck: #5A4636; --duck-head: #2A4A3A;
+    --beak: #C98A35; --fish: #BFD0D6; --night: 1;
+    color-scheme: dark;
+  }
+
+  html, body { height: 100%; }
+  body {
+    background: var(--water-near);
+    color: var(--ink);
+    font-family: var(--font-body);
+    overflow: hidden;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    overscroll-behavior: none;
+  }
+  #lake {
+    position: fixed; inset: 0; width: 100%; height: 100%;
+    display: block; touch-action: none; cursor: grab;
+    -webkit-user-select: none; user-select: none;
+  }
+  #lake.holding { cursor: grabbing; }
+
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip-path: inset(50%); white-space: nowrap;
+  }
+
+  .corner {
+    position: fixed; z-index: 2;
+    font-size: 13px; letter-spacing: 0.02em; color: var(--muted);
+  }
+  .top-left {
+    top: calc(18px + env(safe-area-inset-top, 0px));
+    left: max(20px, env(safe-area-inset-left, 0px));
+  }
+  .top-left { display: flex; align-items: baseline; gap: 14px; }
+  .top-left h1 {
+    margin: 0; font: 400 22px/1 var(--font-display); letter-spacing: 0.01em; color: var(--ink);
+  }
+  .top-right {
+    top: calc(18px + env(safe-area-inset-top, 0px));
+    right: max(20px, env(safe-area-inset-right, 0px));
+  }
+  .bottom-left {
+    bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+    left: max(20px, env(safe-area-inset-left, 0px));
+    font-family: var(--font-data); font-variant-numeric: tabular-nums;
+    pointer-events: none;
+  }
+  .corner a, .corner button {
+    color: var(--muted); font: inherit; letter-spacing: inherit;
+    background: none; border: 0; padding: 6px 2px; margin: -6px -2px;
+    text-decoration: underline; text-decoration-color: transparent;
+    text-underline-offset: 4px; cursor: pointer;
+    transition: color .2s, text-decoration-color .2s;
+  }
+  .corner a:hover, .corner button:hover { color: var(--ink); text-decoration-color: currentColor; }
+  .corner a:focus-visible, .corner button:focus-visible {
+    outline: 2px solid var(--ink); outline-offset: 3px; border-radius: 2px;
+  }
+  #count { color: var(--ink); }
+
+  #hint {
+    position: fixed; z-index: 2; left: 0; right: 0;
+    bottom: calc(104px + env(safe-area-inset-bottom, 0px));
+    text-align: center; font-size: 13px; letter-spacing: 0.02em;
+    color: var(--muted); pointer-events: none;
+    transition: opacity .6s;
+  }
+  #hint.gone { opacity: 0; }
+</style>
+
+<canvas id="lake" role="img" aria-label="A lake seen from a shale beach. Flick the stone to skip it across the water."></canvas>
+
+<header class="corner top-left">
+  <h1>James Mullally</h1>
+  <a href="https://www.linkedin.com/in/jamesmullally/" target="_blank" rel="noopener">LinkedIn</a>
+</header>
+<div class="corner top-right">
+  <button id="sound" type="button" aria-pressed="true">Sound on</button>
+</div>
+<p class="corner bottom-left" aria-live="polite"><span id="count">0 skips</span> · best <span id="best">0</span></p>
+<p id="hint">Flick the stone across the water</p>
+
+<script>
+(function () {
+  'use strict';
+  var NAME = 'James Mullally';
+  var SHOW_BIG_NAME = false;   // the name now sits quietly in the top-left corner instead
+  var canvas = document.getElementById('lake');
+  var ctx = canvas.getContext('2d');
+  var countEl = document.getElementById('count');
+  var bestEl = document.getElementById('best');
+  var hintEl = document.getElementById('hint');
+  var soundBtn = document.getElementById('sound');
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---- scene geometry: a camera 1.5 m above flat water, looking at the horizon
+  var CAM_H = 1.5, Z_MIN = 1.6, G = 9.8, SINK_SPEED = 3.5;
+  var w = 0, h = 0, dpr = 1, cx = 0, hz = 0, f = 1;
+  function project(x, y, z) {
+    return { x: cx + f * x / z, y: hz + f * (CAM_H - y) / z };
+  }
+  function zFromScreenY(sy, y0) {
+    return f * (CAM_H - y0) / Math.max(sy - hz, 0.1 * (h - hz));
+  }
+
+  // ---- theme colours, read from the CSS tokens
+  var C = {};
+  // The scene follows the visitor's own clock: four looks, blended between these hours.
+  var PAL = {
+    day: { 'sky-top': '#74B7E8', 'sky-low': '#DDF0F8', 'water-far': '#A3D0E4', 'water-near': '#3E8DB4',
+      ink: '#14303F', muted: '#21475A', stone: '#4A4F52', ripple: '#F4FBFD', sun: '#FFE7A0', cloud: '#FFFFFF',
+      hills: '#84AD86', sand: '#BBB5A8', 'sand-wet': '#918B80', grass: '#5E8C5A', hull: '#2F3E46',
+      sail: '#FFFFFF', beak: '#E8A33D', fish: '#EAF3F6' },
+    dawn: { 'sky-top': '#8AA6D6', 'sky-low': '#FAD0B4', 'water-far': '#E6C3B8', 'water-near': '#5E84A8',
+      ink: '#1B2A40', muted: '#263A55', stone: '#4A4C52', ripple: '#FFF4EA', sun: '#FFC58A', cloud: '#FFE6DC',
+      hills: '#7E96A0', sand: '#B8ABA2', 'sand-wet': '#8F8482', grass: '#5A8259', hull: '#2F3E46',
+      sail: '#FFF3EA', beak: '#E8893D', fish: '#F3E9E6' },
+    sunset: { 'sky-top': '#7C86BE', 'sky-low': '#F1B8B4', 'water-far': '#D8A8B0', 'water-near': '#3F5C8A',
+      ink: '#1A2238', muted: '#1E2740', stone: '#45474E', ripple: '#FFE9D6', sun: '#FFB07A', cloud: '#FFD3C8',
+      hills: '#9A8E70', sand: '#B59F92', 'sand-wet': '#8C7A72', grass: '#4E7350', hull: '#232B3A',
+      sail: '#FFE4D0', beak: '#E0703A', fish: '#F6DFD2' },
+    night: { 'sky-top': '#0A1626', 'sky-low': '#1E3550', 'water-far': '#173048', 'water-near': '#081320',
+      ink: '#E6EEF2', muted: '#A9BCC6', stone: '#AEB8BC', ripple: '#BFD9E6', sun: '#F3F0DC', cloud: '#2C4460',
+      hills: '#12283A', sand: '#35373B', 'sand-wet': '#26282C', grass: '#2E4A38', hull: '#0A1118',
+      sail: '#C9D4DA', beak: '#C98A35', fish: '#BFD0D6' }
+  };
+  var NUM = {};
+  function mix(a, b, t) {
+    var p = NUM[a], q = NUM[b];
+    return 'rgb(' + Math.round(p[0] + (q[0] - p[0]) * t) + ',' + Math.round(p[1] + (q[1] - p[1]) * t) + ',' + Math.round(p[2] + (q[2] - p[2]) * t) + ')';
+  }
+  var KEYS = [[0, 'night'], [5, 'night'], [6.25, 'dawn'], [7.75, 'day'], [17.25, 'day'], [18.75, 'sunset'], [20.25, 'night'], [24, 'night']];
+  function hex(v) { return [parseInt(v.substr(1, 2), 16), parseInt(v.substr(3, 2), 16), parseInt(v.substr(5, 2), 16)]; }
+  function nowHour() {
+    if (typeof window.__hour === 'number') return window.__hour;
+    var d = new Date();
+    return d.getHours() + d.getMinutes() / 60;
+  }
+  function applyTime() {
+    var hr = nowHour(), a = KEYS[0], b = KEYS[1];
+    for (var i = 0; i < KEYS.length - 1; i++) {
+      if (hr >= KEYS[i][0] && hr <= KEYS[i + 1][0]) { a = KEYS[i]; b = KEYS[i + 1]; break; }
+    }
+    var u = b[0] === a[0] ? 0 : (hr - a[0]) / (b[0] - a[0]);
+    u = u * u * (3 - 2 * u);
+    var A = PAL[a[1]], B = PAL[b[1]];
+    for (var k in A) {
+      var ca = hex(A[k]), cb = hex(B[k]);
+      NUM[k] = [ca[0] + (cb[0] - ca[0]) * u, ca[1] + (cb[1] - ca[1]) * u, ca[2] + (cb[2] - ca[2]) * u];
+      C[k] = 'rgb(' + Math.round(NUM[k][0]) + ',' + Math.round(NUM[k][1]) + ',' + Math.round(NUM[k][2]) + ')';
+    }
+    C.nightAmt = (a[1] === 'night' ? 1 - u : 0) + (b[1] === 'night' ? u : 0);
+    C.hour = hr;
+    var rs = document.documentElement.style;
+    rs.setProperty('--ink', C.ink); rs.setProperty('--muted', C.muted);
+    document.body.style.background = C.sand;
+    buildName();
+  }
+  // The view faces east. The sun comes up over the far shore, climbs to the right (south) and is
+  // out of frame by late morning; after that it is behind you. The moon rises there in the evening.
+  function skyBody() {
+    var hr = C.hour == null ? 9 : C.hour, u;
+    if (hr >= 5.9 && hr <= 12) {
+      u = (hr - 5.9) / 6.1;
+      return { x: w * (0.5 + 0.42 * u), y: hz + 6 - u * 1.25 * hz, vis: true };
+    }
+    if (hr >= 19.5 || hr <= 5.5) {
+      u = ((hr + 24 - 19.5) % 24) / 10;
+      return { x: w * (0.8 + 0.1 * u), y: hz + 6 - Math.sin(u * Math.PI / 2) * 0.8 * hz, vis: true };
+    }
+    return { x: 0, y: -999, vis: false };
+  }
+  window.__setHour = function (v) { window.__hour = v; applyTime(); };
+
+  // ---- the name, drawn once to an offscreen canvas, then mirrored row by row
+  var nameCv = document.createElement('canvas');
+  var nameW = 0, nameH = 0, nameGap = 0;
+  function buildName() {
+    if (!w) return;
+    var fs = Math.max(44, Math.min(132, w * 0.105));
+    var nctx = nameCv.getContext('2d');
+    var font = function (px) { return '400 ' + px + 'px "Instrument Serif", Georgia, "Times New Roman", serif'; };
+    nctx.font = font(fs);
+    var tw = nctx.measureText(NAME).width;
+    if (tw > w - 48) { fs *= (w - 48) / tw; nctx.font = font(fs); }
+    var m = nctx.measureText(NAME);
+    var asc = Math.ceil(m.actualBoundingBoxAscent || fs * 0.75);
+    var desc = Math.ceil(m.actualBoundingBoxDescent || fs * 0.22);
+    nameW = Math.ceil(m.width) + 24;
+    nameH = asc + desc + 4;
+    nameGap = Math.round(fs * 0.05);
+    nameCv.width = Math.ceil(nameW * dpr);
+    nameCv.height = Math.ceil(nameH * dpr);
+    nctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    nctx.font = font(fs);
+    nctx.fillStyle = C.ink || '#1F2D33';
+    nctx.textBaseline = 'alphabetic';
+    nctx.fillText(NAME, 12, asc + 2);
+  }
+
+  // ---- ambient glints on the water
+  var glints = [];
+  for (var i = 0; i < 26; i++) {
+    glints.push({
+      u: Math.random() * 2 - 1,
+      z: 2.2 * Math.pow(45, Math.random()),
+      len: 0.25 + Math.random() * 0.9,
+      ph: Math.random() * 6.28,
+      sp: 0.3 + Math.random() * 0.5
+    });
+  }
+
+  // ---- the rest of the scene: sky, boats, ducks, fish, shore
+  function rnd(a, b) { return a + Math.random() * (b - a); }
+  var clouds = [], stars = [], pebbles = [], blades = [], fish = [], birds = null;
+  var nextFish = 3, nextRipple = 1.5, nextBirds = 14;
+  for (var ci = 0; ci < 5; ci++) {
+    var puffs = [];
+    for (var pi = 0; pi < 5; pi++) puffs.push({ dx: -1.6 + pi * 0.8 + rnd(-0.2, 0.2), dy: rnd(-0.45, 0), r: rnd(0.65, 1.05) });
+    clouds.push({ x: ci * 0.3 - 0.1 + rnd(-0.06, 0.06), y: rnd(0.05, 0.25), s: rnd(0.7, 1.35), sp: rnd(0.004, 0.009), puffs: puffs });
+  }
+  for (var si = 0; si < 46; si++) stars.push({ u: Math.random(), v: Math.random() * 0.9, ph: rnd(0, 6.28), r: rnd(0.5, 1.3) });
+  // a shale beach: lots of flat grey stones
+  for (var bi = 0; bi < 80; bi++) pebbles.push({ u: Math.random(), v: Math.random(), r: rnd(3, 9), a: rnd(0.22, 0.6), q: rnd(0.4, 0.68), light: Math.random() < 0.3 });
+  var farFields = [], farWoods = [], cottages = [];
+  for (var ff = 0; ff < 18; ff++) farFields.push({ u: rnd(-0.02, 1), wd: rnd(0.03, 0.09), lo: rnd(0.25, 0.5), hi: rnd(0.6, 0.95), sk: rnd(-0.012, 0.012), tone: Math.random() });
+  for (var fw = 0; fw < 14; fw++) farWoods.push({ u: Math.random(), wd: rnd(0.02, 0.06), y: rnd(0.35, 0.9), ht: rnd(0.1, 0.2) });
+  for (var fc = 0; fc < 16; fc++) cottages.push({ u: rnd(0.02, 0.98), wd: rnd(2, 4), lit: Math.random() < 0.6 });
+  for (var gi = 0; gi < 9; gi++) blades.push({ x: 18 + gi * 9 + rnd(-3, 3), len: rnd(42, 88), ph: rnd(0, 6.28), lean: rnd(-0.3, 0.3) });
+  var boats = [
+    { x: -22, z: 78, v: 0.9, len: 6.5 },
+    { x: 70, z: 170, v: -0.7, len: 8 }
+  ];
+  var buoy = { x: 2.2, z: 12, kick: 0 }, BUOY_R = 0.3;
+  function newFlock(fromStart) {
+    var dir = Math.random() < 0.5 ? 1 : -1, list = [];
+    var n = 3 + Math.floor(Math.random() * 4);
+    for (var i = 0; i < n; i++) list.push({ dx: -i * 20 + rnd(-5, 5), dy: (i % 2 ? 1 : -1) * i * 6 + rnd(-3, 3), ph: rnd(0, 6.28) });
+    return { x: fromStart ? w * 0.28 : (dir > 0 ? -40 : w + 40), y: rnd(0.08, 0.28) * h, v: dir * rnd(38, 58), dir: dir, list: list };
+  }
+  function shoreY(x) {
+    return h - Math.max(96, h * 0.12) - 16 * Math.sin(x / w * 3.3 + 0.5);
+  }
+  function spreadAt(z) { return z * (w / 2) / f; }
+
+  function updateScene(dt) {
+    var i;
+    for (i = 0; i < clouds.length; i++) {
+      clouds[i].x += clouds[i].sp * dt;
+      if (clouds[i].x > 1.25) clouds[i].x = -0.25;
+    }
+    for (i = 0; i < boats.length; i++) {
+      var b = boats[i], lim = spreadAt(b.z) + b.len;
+      b.x += b.v * dt;
+      if (b.x > lim) b.x = -lim; else if (b.x < -lim) b.x = lim;
+    }
+    buoy.kick *= Math.exp(-dt / 1.1);
+    nextFish -= dt;
+    if (nextFish <= 0) {
+      nextFish = rnd(5, 11);
+      var fz = rnd(5, 22);
+      var fo = { x: rnd(-0.7, 0.7) * spreadAt(fz), z: fz, t: 0, dur: 0.85, vx: (Math.random() < 0.5 ? -1 : 1) * rnd(1, 1.6), top: rnd(0.4, 0.65) };
+      fish.push(fo);
+      addRipple(fo.x, fo.z, 0.4, 2, true);
+    }
+    for (i = fish.length - 1; i >= 0; i--) {
+      fish[i].t += dt;
+      if (fish[i].t >= fish[i].dur) {
+        addRipple(fish[i].x + fish[i].vx * fish[i].dur, fish[i].z, 0.5, 2, true);
+        fish.splice(i, 1);
+      }
+    }
+    nextRipple -= dt;
+    if (nextRipple <= 0) {
+      nextRipple = rnd(1.5, 4);
+      var rz = 3 * Math.pow(14, Math.random());
+      addRipple(rnd(-0.9, 0.9) * spreadAt(rz), rz, 0.28, 2, true);
+    }
+    if (birds) {
+      birds.x += birds.v * dt;
+      if (birds.x < -260 || birds.x > w + 260) { birds = null; nextBirds = rnd(8, 18); }
+    } else {
+      nextBirds -= dt;
+      if (nextBirds <= 0) birds = newFlock(false);
+    }
+  }
+
+  function poly(pts, color) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(pts[0], pts[1]);
+    for (var i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]);
+    ctx.closePath(); ctx.fill();
+  }
+
+  function drawSky(t) {
+    var i;
+    if (C.nightAmt > 0.02) {
+      ctx.fillStyle = C.sun;
+      for (i = 0; i < stars.length; i++) {
+        var st = stars[i];
+        ctx.globalAlpha = (0.35 + 0.35 * Math.sin(t * 1.3 + st.ph)) * C.nightAmt;
+        ctx.beginPath(); ctx.arc(st.u * w, st.v * hz, st.r, 0, 6.2832); ctx.fill();
+      }
+    }
+    // sun (or moon), with two flat halos
+    var body = skyBody(), sx = body.x, sy = body.y, sr = Math.max(18, Math.min(40, Math.min(w, h) * 0.045));
+    if (body.vis) {
+      ctx.fillStyle = C.sun;
+      ctx.globalAlpha = 0.13; ctx.beginPath(); ctx.arc(sx, sy, sr * (2.7 + 0.12 * Math.sin(t * 0.8)), 0, 6.2832); ctx.fill();
+      ctx.globalAlpha = 0.2; ctx.beginPath(); ctx.arc(sx, sy, sr * 1.75, 0, 6.2832); ctx.fill();
+      ctx.globalAlpha = 1; ctx.beginPath(); ctx.arc(sx, sy, sr, 0, 6.2832); ctx.fill();
+    }
+
+    // clouds
+    ctx.fillStyle = C.cloud;
+    ctx.globalAlpha = 0.92 - 0.17 * C.nightAmt;
+    var unit = Math.max(16, Math.min(w, h) * 0.04);
+    for (i = 0; i < clouds.length; i++) {
+      var c = clouds[i], u = unit * c.s, px = c.x * w, py = c.y * h;
+      ctx.beginPath();
+      for (var k = 0; k < c.puffs.length; k++) {
+        var p = c.puffs[k];
+        ctx.moveTo(px + p.dx * u + p.r * u * 1.3, py + p.dy * u);
+        ctx.ellipse(px + p.dx * u, py + p.dy * u, p.r * u * 1.3, p.r * u * 0.72, 0, 0, 6.2832);
+      }
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // birds
+    if (birds) {
+      ctx.strokeStyle = C.ink; ctx.lineWidth = 1.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.globalAlpha = 0.6;
+      for (i = 0; i < birds.list.length; i++) {
+        var bd = birds.list[i];
+        var bx = birds.x + bd.dx * birds.dir, by = birds.y + bd.dy + Math.sin(t * 1.5 + bd.ph) * 2;
+        var flap = Math.sin(t * 8 + bd.ph) * 4;
+        ctx.beginPath();
+        ctx.moveTo(bx - 7, by - 2 - flap); ctx.lineTo(bx, by); ctx.lineTo(bx + 7, by - 2 - flap);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    drawFarShore();
+  }
+
+  // The far side of the lake: one long, even ridge about two miles off,
+  // a patchwork of fields and woodlots, trees along the waterline, and a scatter of cottages.
+  function drawFarShore() {
+    var R = Math.max(14, h * 0.036), x, i;
+    ctx.save();
+    ctx.fillStyle = C.hills;
+    ctx.beginPath(); ctx.moveTo(0, hz + 1);
+    for (x = 0; x <= w + 8; x += 8) {
+      var uu = x / w;
+      ctx.lineTo(x, hz - R * (0.74 + 0.15 * Math.sin(uu * 3.1 + 0.4) + 0.07 * Math.sin(uu * 8.3 + 2)));
+    }
+    ctx.lineTo(w, hz + 1); ctx.closePath(); ctx.fill();
+    ctx.clip();
+    for (i = 0; i < farFields.length; i++) {
+      var fd = farFields[i], x0 = fd.u * w, ww = fd.wd * w, sk = fd.sk * w;
+      poly([x0, hz - R * fd.lo, x0 + ww, hz - R * fd.lo, x0 + ww + sk, hz - R * fd.hi, x0 + sk, hz - R * fd.hi],
+        mix('hills', 'sun', 0.22 + 0.22 * fd.tone));
+    }
+    ctx.fillStyle = mix('hills', 'hull', 0.32);
+    for (i = 0; i < farWoods.length; i++) {
+      var wd = farWoods[i];
+      ctx.beginPath(); ctx.ellipse(wd.u * w, hz - R * wd.y, wd.wd * w, R * wd.ht, 0, 0, 6.2832); ctx.fill();
+    }
+    ctx.fillStyle = mix('hills', 'hull', 0.5);
+    ctx.beginPath(); ctx.moveTo(0, hz + 1);
+    for (x = 0; x <= w + 6; x += 6) ctx.lineTo(x, hz - R * (0.17 + 0.07 * Math.sin(x * 0.21) + 0.05 * Math.sin(x * 0.057 + 1)));
+    ctx.lineTo(w, hz + 1); ctx.closePath(); ctx.fill();
+    ctx.restore();
+    var lamps = C.nightAmt > 0.5;
+    for (i = 0; i < cottages.length; i++) {
+      var ct = cottages[i];
+      if (lamps && !ct.lit) continue;
+      ctx.fillStyle = lamps ? C.sun : C.sail;
+      ctx.globalAlpha = 0.85;
+      ctx.fillRect(ct.u * w, hz - 3.5, lamps ? 2 : ct.wd, 2.5);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawSunPath(t) {
+    var body = skyBody(), sx = body.x, span = h - hz;
+    if (!body.vis || body.y < -40) return;
+    var low = 1 - 0.65 * Math.max(0, Math.min(1, (hz - body.y) / hz));
+    ctx.strokeStyle = C.sun; ctx.lineCap = 'round';
+    for (var i = 0; i < 20; i++) {
+      var q = i / 19, y = hz + 5 + q * q * span * 0.7;
+      var half = (6 + q * 46) * (0.6 + 0.4 * Math.sin(t * 1.9 + i * 2.3));
+      ctx.globalAlpha = low * (0.5 - 0.2 * C.nightAmt) * (1 - q * 0.6) * (0.55 + 0.45 * Math.sin(t * 2.6 + i * 1.3));
+      ctx.lineWidth = 1 + q * 1.5;
+      var jx = Math.sin(t * 1.1 + i * 1.7) * (3 + q * 14);
+      ctx.beginPath(); ctx.moveTo(sx + jx - half, y); ctx.lineTo(sx + jx + half, y); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawBoat(b, t) {
+    var p = project(b.x, 0, b.z), s = f * b.len / b.z, dir = b.v > 0 ? 1 : -1;
+    for (var pass = 0; pass < 2; pass++) {
+      ctx.save();
+      ctx.translate(p.x, p.y + (pass ? s * 0.05 : 0));
+      ctx.rotate(Math.sin(t * 0.9 + b.z) * 0.03);
+      ctx.scale(dir, pass ? -0.65 : 1);
+      ctx.globalAlpha = pass ? 0.22 : 1;
+      poly([0.05 * s, -0.92 * s, 0.05 * s, -0.13 * s, 0.44 * s, -0.13 * s], C.sail);
+      poly([-0.02 * s, -0.8 * s, -0.02 * s, -0.13 * s, -0.36 * s, -0.13 * s], C.sail);
+      poly([-0.5 * s, -0.08 * s, 0.52 * s, -0.08 * s, 0.38 * s, 0.03 * s, -0.42 * s, 0.03 * s], C.hull);
+      ctx.restore();
+    }
+  }
+
+  // a marker buoy: something harmless to aim at; it rocks when a stone lands close
+  function drawBuoy(t) {
+    var p = project(buoy.x, 0, buoy.z), s = f * 0.8 / buoy.z;
+    var tilt = (reduceMotion ? 0 : Math.sin(t * 1.3) * 0.06) + buoy.kick * 0.3 * Math.sin(t * 9);
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.globalAlpha = 0.16; ctx.fillStyle = C.ink;
+    ctx.beginPath(); ctx.ellipse(0, s * 0.03, s * 0.34, s * 0.06, 0, 0, 6.2832); ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.rotate(tilt);
+    poly([-0.26 * s, 0, 0.26 * s, 0, 0.13 * s, -0.7 * s, -0.13 * s, -0.7 * s], C.beak);
+    poly([-0.2 * s, -0.3 * s, 0.2 * s, -0.3 * s, 0.17 * s, -0.46 * s, -0.17 * s, -0.46 * s], C.sail);
+    poly([-0.05 * s, -0.7 * s, 0.05 * s, -0.7 * s, 0.05 * s, -0.92 * s, -0.05 * s, -0.92 * s], C.hull);
+    ctx.restore();
+  }
+
+  function drawFish(fo) {
+    var u = fo.t / fo.dur;
+    var at = function (uu) { return project(fo.x + fo.vx * fo.dur * uu, 4 * fo.top * uu * (1 - uu), fo.z); };
+    var a = at(u), b = at(Math.min(1, u + 0.04));
+    var s = f * 0.34 / fo.z, ang = Math.atan2(b.y - a.y, b.x - a.x);
+    ctx.save();
+    ctx.translate(a.x, a.y); ctx.rotate(ang);
+    ctx.fillStyle = C.fish;
+    ctx.beginPath(); ctx.ellipse(0, 0, s * 0.5, s * 0.17, 0, 0, 6.2832); ctx.fill();
+    poly([-0.42 * s, 0, -0.72 * s, -0.2 * s, -0.72 * s, 0.2 * s], C.fish);
+    ctx.restore();
+  }
+
+  function drawShore(t) {
+    var x, lap = reduceMotion ? 6 : 7 + 5 * Math.sin(t * 0.9);
+    // wet sand that the water laps over, with a foam line
+    ctx.fillStyle = C['sand-wet'];
+    ctx.beginPath(); ctx.moveTo(0, h);
+    for (x = 0; x <= w + 12; x += 12) ctx.lineTo(x, shoreY(x) - lap + 2 * Math.sin(x * 0.05 + t * 1.3));
+    ctx.lineTo(w, h); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = C.ripple; ctx.lineWidth = 2; ctx.globalAlpha = 0.75;
+    ctx.beginPath();
+    for (x = 0; x <= w + 12; x += 12) {
+      var yy = shoreY(x) - lap + 2 * Math.sin(x * 0.05 + t * 1.3);
+      if (x === 0) ctx.moveTo(x, yy); else ctx.lineTo(x, yy);
+    }
+    ctx.stroke(); ctx.globalAlpha = 1;
+    // dry sand
+    ctx.fillStyle = C.sand;
+    ctx.beginPath(); ctx.moveTo(0, h);
+    for (x = 0; x <= w + 12; x += 12) ctx.lineTo(x, shoreY(x) + 6);
+    ctx.lineTo(w, h); ctx.closePath(); ctx.fill();
+    // pebbles
+    for (var i = 0; i < pebbles.length; i++) {
+      var pb = pebbles[i], px = pb.u * w, top = shoreY(px) + 18;
+      ctx.fillStyle = pb.light ? mix('sand', 'sail', 0.45) : C.stone;
+      ctx.globalAlpha = pb.a;
+      ctx.beginPath(); ctx.ellipse(px, top + pb.v * Math.max(8, h - top - 10), pb.r, pb.r * pb.q, 0, 0, 6.2832); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    // beach grass, bottom right
+    ctx.strokeStyle = C.grass; ctx.lineWidth = 2.2; ctx.lineCap = 'round';
+    for (var g = 0; g < blades.length; g++) {
+      var bl = blades[g], bx = w - bl.x;
+      var sway = (reduceMotion ? 0 : Math.sin(t * 1.1 + bl.ph) * 7) + bl.lean * 26;
+      ctx.beginPath(); ctx.moveTo(bx, h + 4);
+      ctx.quadraticCurveTo(bx + sway * 0.2, h - bl.len * 0.6, bx + sway, h - bl.len);
+      ctx.stroke();
+    }
+  }
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    w = canvas.clientWidth; h = canvas.clientHeight;
+    canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+    cx = w / 2; hz = Math.round(h * 0.42);
+    f = (h - hz) * Z_MIN / CAM_H;
+    buildName();
+  }
+
+  // ---- state
+  var stones = [];      // stones in flight
+  var ripples = [];
+  var energy = 0;       // how disturbed the reflection is
+  var held = null;      // {x, y} in screen px while dragging
+  var samples = [];
+  var restAlpha = 1;
+  var throwId = 0, shownCount = 0, best = 0;
+  try { best = parseInt(localStorage.getItem('stone-best'), 10) || 0; } catch (e) {}
+  bestEl.textContent = best;
+
+  function restPos() { return { x: cx, y: h - 62 }; }
+
+  function setCount(n) {
+    shownCount = n;
+    countEl.textContent = n + (n === 1 ? ' skip' : ' skips');
+    if (n > best) {
+      best = n; bestEl.textContent = best;
+      try { localStorage.setItem('stone-best', String(best)); } catch (e) {}
+    }
+  }
+
+  // ---- sound: one soft plip per skip, rising in pitch
+  var soundOn = true, actx = null;
+  try { soundOn = localStorage.getItem('stone-sound') !== 'off'; } catch (e) {}
+  function paintSound() {
+    soundBtn.textContent = soundOn ? 'Sound on' : 'Sound off';
+    soundBtn.setAttribute('aria-pressed', String(soundOn));
+  }
+  paintSound();
+  soundBtn.addEventListener('click', function () {
+    soundOn = !soundOn; paintSound();
+    try { localStorage.setItem('stone-sound', soundOn ? 'on' : 'off'); } catch (e) {}
+  });
+  function wakeAudio() {
+    if (!soundOn) return;
+    try {
+      if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+      if (actx.state === 'suspended') actx.resume();
+      if (!clipsAsked) { clipsAsked = true; loadClip('skip'); loadClip('sink'); }
+    } catch (e) { actx = null; }
+  }
+  // A splash is a short burst of filtered noise; a sinking stone adds a low "plunk".
+  // Both get quieter the farther out the stone is.
+  // Real recordings of a rock hitting water (CC0, see sounds/CREDITS.txt).
+  // A skip plays just the first slap of one, pitched up a little; the sink plays the other in full.
+  var clips = { skip: null, sink: null }, clipsAsked = false;
+  var lastSkipAt = -10, lastRate = 0;
+  function loadClip(name) {
+    fetch('sounds/' + (name === 'skip' ? 'plop-skip' : 'plop-sink') + '.mp3')
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+      .then(function (ab) { return new Promise(function (ok, no) { actx.decodeAudioData(ab, ok, no); }); })
+      .then(function (buf) {
+        var d = buf.getChannelData(0), peak = 0, i;
+        for (i = 0; i < d.length; i++) { var a = Math.abs(d[i]); if (a > peak) peak = a; }
+        var on = 0;
+        for (i = 0; i < d.length; i++) { if (Math.abs(d[i]) > peak * 0.08) { on = i; break; } }
+        clips[name] = { buf: buf, start: Math.max(0, on / buf.sampleRate - 0.004), peak: peak || 1 };
+        // loudness of the watery tail after the splash, used to level the skitter wash
+        var a0 = Math.floor((clips[name].start + 0.3) * buf.sampleRate), a1 = Math.min(d.length, Math.floor((clips[name].start + 1.1) * buf.sampleRate)), sum = 0;
+        for (i = a0; i < a1; i++) sum += d[i] * d[i];
+        clips[name].tailRms = a1 > a0 ? Math.sqrt(sum / (a1 - a0)) : 0;
+        window.__clips = clips;
+      })
+      .catch(function () {});
+  }
+  // Skips use the original "rock in water" recording, pitched up, but shaped the way the wetter
+  // splashes were: a long natural tail so quick skips overlap, and a different pitch each time.
+  function splash(z, sink) {
+    if (!soundOn || !actx) return;
+    var clip = sink ? clips.sink : clips.skip;
+    if (!clip) return;
+    try {
+      var t = actx.currentTime;
+      var near = Math.max(0.15, Math.min(1, 5 / z));
+      var src = actx.createBufferSource(); src.buffer = clip.buf;
+      var g = actx.createGain();
+      if (sink) {
+        var dur = Math.min(1.4, clip.buf.duration - clip.start), vol = 0.7 * near / clip.peak;
+        g.gain.setValueAtTime(vol, t);
+        g.gain.setValueAtTime(vol, t + dur * 0.5);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        src.connect(g); g.connect(actx.destination);
+        src.start(t, clip.start); src.stop(t + dur + 0.02);
+      } else {
+        // skips that follow closely are quieter and a little duller, so a fast run stays gentle
+        var close = Math.max(0, Math.min(1, (0.45 - (t - lastSkipAt)) / 0.3));
+        lastSkipAt = t;
+        var rate = 1.3 + Math.random() * 0.4;
+        if (Math.abs(rate - lastRate) < 0.08) rate += rate < 1.5 ? 0.12 : -0.12;   // never the same pitch twice running
+        lastRate = rate;
+        src.playbackRate.value = rate;
+        var level = 0.4 * near * (1 - 0.5 * close) / clip.peak;
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.linearRampToValueAtTime(level, t + 0.006);
+        g.gain.setTargetAtTime(0, t + 0.1, 0.16);   // rings out over about 0.7 s
+        var lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 0.5;
+        lp.frequency.value = 7500 - 3500 * close;
+        src.connect(lp); lp.connect(g); g.connect(actx.destination);
+        src.start(t, clip.start); src.stop(t + 0.75);
+      }
+      window.__audioPlays = (window.__audioPlays || 0) + 1;
+    } catch (e) { window.__audioErr = String(e); }
+  }
+
+  // ---- throwing
+  function launch(sx, sy, vxs, vys) {
+    var speed = Math.hypot(vxs, vys);
+    if (vys > -0.25 * h || speed < 0.35 * h) return false;   // too gentle, or not away from you
+    var z = Math.min(zFromScreenY(sy, 0.4), 9);
+    // Flick strength, 0 (barely a throw) to 1 (about four screen-heights a second), sets how many
+    // skips the stone is good for: 2-3 when weak, around 15 when strong. The speed kept at each
+    // skip is then chosen so the stone runs out of pace after that many.
+    var power = Math.max(0, Math.min(1, (speed / h - 0.35) / 3.65));
+    var want = 1.5 + Math.pow(power, 1.3) * 12.5 + Math.random();
+    var vz = 6 + power * 20;
+    var lean = Math.max(-0.6, Math.min(0.6, vxs / Math.abs(vys)));
+    stones.push({
+      id: ++throwId, x: (sx - cx) * z / f, y: 0.4, z: z,
+      vx: vz * lean * 0.5, vy: 1.0 + Math.random() * 0.5, vz: vz,
+      keep: Math.pow(SINK_SPEED / vz, 1 / want),
+      skips: 0, spin: Math.random() * 6.28
+    });
+    setCount(0);
+    restAlpha = -0.6;            // the next stone fades in after a beat
+    hintEl.classList.add('gone');
+    return true;
+  }
+
+  function addRipple(x, z, strength, rings, quiet) {
+    ripples.push({ x: x, z: z, age: 0, strength: strength, rings: rings, life: 3.2 + strength });
+    if (quiet) return;
+    energy = Math.min(4.5, energy + 1.1 * strength);
+    if (Math.hypot(buoy.x - x, buoy.z - z) < 2) buoy.kick = 1;
+  }
+
+  function stepStone(s, dt) {
+    var px = s.x, py = s.y, pz = s.z;
+    s.vy -= G * dt;
+    s.x += s.vx * dt; s.y += s.vy * dt; s.z += s.vz * dt;
+    s.spin += dt * 14;
+    // the buoy is solid: test the whole path travelled this frame, so a fast stone can't tunnel through
+    if (!s.hitBuoy) {
+      var dx = s.x - px, dz = s.z - pz, len2 = dx * dx + dz * dz;
+      var tt = len2 ? Math.max(0, Math.min(1, ((buoy.x - px) * dx + (buoy.z - pz) * dz) / len2)) : 0;
+      var hx = px + dx * tt, hzz = pz + dz * tt, hy = py + (s.y - py) * tt;
+      var nx = hx - buoy.x, nz = hzz - buoy.z, dist = Math.hypot(nx, nz);
+      if (dist < BUOY_R && hy < 0.75) {
+        s.hitBuoy = true;
+        if (dist < 1e-4) { nx = 0; nz = -1; dist = 1; }
+        nx /= dist; nz /= dist;
+        var dot = s.vx * nx + s.vz * nz;
+        if (dot < 0) { s.vx -= 2 * dot * nx; s.vz -= 2 * dot * nz; }   // bounce off the side it struck
+        s.vx *= 0.4; s.vz *= 0.4;
+        s.x = buoy.x + nx * (BUOY_R + 0.02); s.z = buoy.z + nz * (BUOY_R + 0.02);
+        s.y = Math.max(hy, 0.05); s.vy = 1.8;
+        buoy.kick = 2;
+        addRipple(buoy.x, buoy.z, 0.6, 2, true);
+        window.__buoyHits = (window.__buoyHits || 0) + 1;
+        return true;
+      }
+    }
+    if (s.y > 0) return true;
+    // touched the water
+    var horiz = Math.hypot(s.vx, s.vz);
+    var steep = Math.abs(s.vy) > horiz * 0.95;
+    if (horiz < SINK_SPEED || steep || s.z > 320) {
+      addRipple(s.x, s.z, 1.0, 3);
+      splash(s.z, true);
+      (window.__res = window.__res || {})[s.id] = s.skips;
+      return false;                                  // sinks
+    }
+    s.skips++;
+    if (s.id === throwId) setCount(s.skips);
+    addRipple(s.x, s.z, 0.55, 2);
+    splash(s.z, false);
+    var keep = s.keep * (0.995 + Math.random() * 0.01);
+    s.vx *= keep; s.vz *= keep;
+    s.y = 0.001;
+    s.vy = Math.min(Math.abs(s.vy) * 0.62, horiz * keep * 0.22) + 0.25;
+    return true;
+  }
+
+  // ---- drawing
+  function drawStone(px, py, r, alpha, spin) {
+    r = Math.max(r, 1);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(px, py);
+    ctx.rotate(Math.sin(spin || 0) * 0.12);
+    ctx.fillStyle = C.stone;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r * 1.55, r * 0.78, 0, 0, 6.2832);
+    ctx.fill();
+    ctx.restore();
+  }
+  function drawShadow(px, py, r, alpha) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = C.ink;
+    ctx.beginPath();
+    ctx.ellipse(px, py, Math.max(r, 1) * 1.5, Math.max(r * 0.32, 0.6), 0, 0, 6.2832);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function draw(t) {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    var sky = ctx.createLinearGradient(0, 0, 0, hz);
+    sky.addColorStop(0, C['sky-top']); sky.addColorStop(1, C['sky-low']);
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, w, hz);
+
+    var water = ctx.createLinearGradient(0, hz, 0, h);
+    water.addColorStop(0, C['water-far']); water.addColorStop(1, C['water-near']);
+    ctx.fillStyle = water; ctx.fillRect(0, hz, w, h - hz);
+    drawSky(t);
+    drawSunPath(t);
+    for (var bq = boats.length - 1; bq >= 0; bq--) drawBoat(boats[bq], t);
+
+    // glints
+    ctx.strokeStyle = C.ripple; ctx.lineWidth = 1; ctx.lineCap = 'round';
+    for (var i = 0; i < glints.length; i++) {
+      var gl = glints[i];
+      var spread = gl.z * (w / 2) / f * 1.15;
+      var drift = reduceMotion ? 0 : Math.sin(t * 0.07 * gl.sp + gl.ph) * 0.4;
+      var p = project(gl.u * spread + drift, 0, gl.z);
+      var len = f * gl.len / gl.z;
+      var a = 0.07 + 0.09 * (0.5 + 0.5 * Math.sin(t * gl.sp + gl.ph));
+      ctx.globalAlpha = reduceMotion ? 0.11 : a;
+      ctx.beginPath(); ctx.moveTo(p.x - len / 2, p.y); ctx.lineTo(p.x + len / 2, p.y); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    // the name and its reflection
+    if (SHOW_BIG_NAME && nameCv.width) {
+      var x0 = Math.round(cx - nameW / 2);
+      ctx.drawImage(nameCv, x0, hz - nameGap - nameH, nameW, nameH);
+      var squash = 0.86, refH = Math.floor(nameH * squash);
+      var base = reduceMotion ? 0 : 0.7;
+      for (var r = 0; r < refH; r++) {
+        var depth = r / refH;
+        var amp = (base + energy) * (0.35 + depth * 1.1);
+        var dx = amp * Math.sin(r * 0.21 + t * 1.7) + amp * 0.5 * Math.sin(r * 0.057 - t * 1.1);
+        var srcY = (nameH - (r + 1) / squash) * dpr;
+        if (srcY < 0) break;
+        ctx.globalAlpha = 0.36 * (1 - depth * 0.8);
+        ctx.drawImage(nameCv, 0, srcY, nameCv.width, dpr / squash, x0 + dx, hz + nameGap + r, nameW, 1);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // ripples
+    ctx.strokeStyle = C.ripple;
+    for (var k = 0; k < ripples.length; k++) {
+      var rp = ripples[k];
+      var c = project(rp.x, 0, rp.z);
+      var fade = Math.pow(1 - rp.age / rp.life, 2);
+      for (var n = 0; n < rp.rings; n++) {
+        var rad = (rp.age - n * 0.24) * 0.85;
+        if (rad <= 0) continue;
+        var rx = f * rad / rp.z;
+        var ry = Math.min(rx * CAM_H / rp.z, rx * 0.6);
+        ctx.globalAlpha = Math.min(0.6, rp.strength * fade * 0.7) * (1 - n * 0.25);
+        ctx.lineWidth = Math.max(0.6, Math.min(1.4, f * 0.02 / rp.z));
+        ctx.beginPath(); ctx.ellipse(c.x, c.y, rx, Math.max(ry, 0.4), 0, 0, 6.2832); ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    drawBuoy(t);
+    for (var fq = 0; fq < fish.length; fq++) drawFish(fish[fq]);
+    drawShore(t);
+
+    // stones in flight, far ones first
+    stones.sort(function (a, b) { return b.z - a.z; });
+    for (var j = 0; j < stones.length; j++) {
+      var s = stones[j];
+      var rr = f * 0.05 / s.z;
+      var sh = project(s.x, 0, s.z), sp = project(s.x, s.y, s.z);
+      drawShadow(sh.x, sh.y, rr, 0.16);
+      drawStone(sp.x, sp.y, rr, 1, s.spin);
+    }
+
+    // the stone in hand, or the one waiting at your feet
+    if (held) {
+      var hzed = Math.min(zFromScreenY(held.y, 0.4), 9);
+      drawStone(held.x, held.y, f * 0.05 / hzed, 1, 0);
+    } else if (restAlpha > 0) {
+      var rest = restPos();
+      var rz = zFromScreenY(rest.y, 0);
+      var rrad = f * 0.05 / rz;
+      drawShadow(rest.x, rest.y + rrad * 0.7, rrad, 0.14 * restAlpha);
+      drawStone(rest.x, rest.y, rrad, restAlpha, 0);
+    }
+  }
+
+  var last = 0;
+  function frame(now) {
+    var t = now / 1000;
+    var dt = Math.min(0.033, last ? t - last : 0.016);
+    last = t;
+    for (var i = stones.length - 1; i >= 0; i--) {
+      if (!stepStone(stones[i], dt)) stones.splice(i, 1);
+    }
+    for (var k = ripples.length - 1; k >= 0; k--) {
+      ripples[k].age += dt;
+      if (ripples[k].age >= ripples[k].life) ripples.splice(k, 1);
+    }
+    if (!reduceMotion) updateScene(dt);
+    energy *= Math.exp(-dt / 1.4);
+    if (restAlpha < 1) restAlpha = Math.min(1, restAlpha + dt * 1.6);
+    draw(t);
+    requestAnimationFrame(frame);
+  }
+
+  // ---- input
+  function pt(e) {
+    var r = canvas.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top, t: performance.now() };
+  }
+  canvas.addEventListener('pointerdown', function (e) {
+    if (e.button !== undefined && e.button > 0) return;
+    wakeAudio();
+    var p = pt(e);
+    held = { x: p.x, y: p.y };
+    samples = [p];
+    canvas.classList.add('holding');
+    try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+    e.preventDefault();
+  });
+  canvas.addEventListener('pointermove', function (e) {
+    if (!held) return;
+    var p = pt(e);
+    held.x = p.x; held.y = p.y;
+    samples.push(p);
+    if (samples.length > 12) samples.shift();
+  });
+  function release(e) {
+    if (!held) return;
+    var p = pt(e);
+    samples.push(p);
+    var first = samples[0];
+    for (var i = 0; i < samples.length; i++) {
+      if (p.t - samples[i].t <= 90) { first = samples[i]; break; }
+    }
+    var dt = Math.max((p.t - first.t) / 1000, 0.008);
+    var thrown = launch(p.x, p.y, (p.x - first.x) / dt, (p.y - first.y) / dt);
+    held = null;
+    canvas.classList.remove('holding');
+    if (!thrown) restAlpha = 0.2;
+  }
+  canvas.addEventListener('pointerup', release);
+  canvas.addEventListener('pointercancel', function () {
+    held = null; canvas.classList.remove('holding');
+  });
+
+  // keyboard: Space or Enter throws a decent stone
+  window.addEventListener('keydown', function (e) {
+    if (e.key !== ' ' && e.key !== 'Enter') return;
+    var tag = (e.target && e.target.tagName) || '';
+    if (tag === 'A' || tag === 'BUTTON') return;
+    e.preventDefault();
+    wakeAudio();
+    var rest = restPos();
+    var v = h * (1.6 + Math.random() * 2.2);
+    launch(rest.x, rest.y - 40, (Math.random() - 0.5) * 0.4 * v, -v);
+  });
+
+  // ---- boot
+  window.addEventListener('resize', resize);
+  resize();
+  applyTime();
+  setInterval(applyTime, 60000);
+  birds = newFlock(true);
+  if (document.fonts && document.fonts.load) {
+    document.fonts.load('400 80px "Instrument Serif"').then(buildName, function () {});
+    document.fonts.ready.then(buildName);
+  }
+  requestAnimationFrame(frame);
+
+  // test hook for scripted throws
+  window.__throw = function (speedScreens, lean) {
+    var rest = restPos(); var v = h * speedScreens;
+    return launch(rest.x, rest.y - 40, (lean || 0) * v, -v);
+  };
+})();
+</script>
