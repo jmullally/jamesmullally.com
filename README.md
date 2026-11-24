@@ -17,7 +17,6 @@ python -m http.server 8091
 
 Opening `index.html` straight from disk shows the scene but not the sound, because browsers block loading the audio files from a `file://` page.
 
-## Not done yet
+## Hosting
 
-- `index.html` has no `<!doctype html>`, `<html>` or `<body>` wrapper, because it is also published as a Claude artifact, which adds its own. Add the wrapper before deploying it to the real domain.
-- Not yet deployed; jamesmullally.com still redirects to LinkedIn.
+Served by Cloudflare Pages at https://jamesmullally.com. The Pages project builds from `main` with no build step (output directory is the repository root), so every push to `main` goes live within a minute or so.
